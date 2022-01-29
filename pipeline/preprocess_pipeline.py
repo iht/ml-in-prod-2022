@@ -4,6 +4,7 @@ from typing import List, Dict
 
 import apache_beam as beam
 import tensorflow_transform.beam as tft_beam
+import tensorflow_transform as tft
 import tensorflow as tf
 from tensorflow_transform.tf_metadata import dataset_metadata, schema_utils
 from apache_beam import PCollection, Pipeline
@@ -37,6 +38,36 @@ def get_train_and_test(p: Pipeline, data_location: str) -> (PCollection[Dict], P
     test_dicts = (test_pos_dicts, test_neg_dicts) | "Test set" >> beam.Flatten()
 
     return train_dicts, test_dicts
+
+
+def preprocessing_fn_tfidf(inputs):
+    # Just an example, not used here
+
+    texts = inputs['text']
+    targets = inputs['target']
+
+    # "Hola que peli mas molona"
+    words = tf.strings.split(texts, sep=" ").to_sparse()
+    # ["Hola", "que", ....]
+    ngrams = tft.ngrams(words, ngram_range=(1, 2), separator=" ")
+    vocabulary = tft.compute_and_apply_vocabulary(ngrams, top_k=20000)
+    indices, weights = tft.tfidf(vocabulary, 20000)
+
+    return {'indices': indices, 'weights': weights, 'targets': targets}
+
+
+def preprocesing_1_hot(inputs):
+    texts = inputs['text']
+    targets = inputs['target']
+
+    words = tf.strings.split(texts, sep=" ").to_sparse()
+    vocabulary = tft.compute_and_apply_vocabulary(words, top_k=20000)
+    hot_encoded_vector = tf.one_hot(vocabulary, depth=20000, on_value=1, off_value=0, dtype=tf.int8)
+
+    ### How to read later if you import these TFRecords with Keras for training
+    # tf.sparse.to_dense(hot_encoded_vector, default_value=0)
+
+    return {'hot_encoded': hot_encoded_vector, 'targets': targets}
 
 
 def preprocessing_fn(inputs):
