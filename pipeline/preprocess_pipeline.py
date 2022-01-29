@@ -3,8 +3,11 @@ import os
 from typing import List, Dict
 
 import apache_beam as beam
+import tensorflow_transform.beam as tft_beam
+import tensorflow as tf
+from tensorflow_transform.tf_metadata import dataset_metadata, schema_utils
 from apache_beam import PCollection, Pipeline
-from apache_beam.options.pipeline_options import PipelineOptions
+from apache_beam.options.pipeline_options import PipelineOptions, GoogleCloudOptions
 
 
 def get_train_and_test(p: Pipeline, data_location: str) -> (PCollection[Dict], PCollection[Dict]):
@@ -36,8 +39,42 @@ def get_train_and_test(p: Pipeline, data_location: str) -> (PCollection[Dict], P
     return train_dicts, test_dicts
 
 
-def run_pipeline(argv: List[str], data_location: str, output_location: str):
-    options = PipelineOptions(argv)
+def preprocessing_fn(inputs):
+    # texts = inputs['text']
+    # targets = inputs['target']
 
-    with beam.Pipeline(options=options) as p:
+    outputs = inputs.copy()
+
+    return outputs
+
+
+def run_pipeline(argv: List[str], data_location: str, output_location: str):
+    feature_spec = {
+        'text': tf.io.FixedLenFeature([], tf.strings),
+        'target': tf.io.FixedLenFeature([], tf.int64)
+    }
+
+    metadata = dataset_metadata.DatasetMetadata(
+        schema_utils.schema_as_feature_spec(feature_spec)
+    )
+
+    options = PipelineOptions(argv)
+    gcp_options = options.view_as(GoogleCloudOptions)
+    temp_dir = gcp_options.temp_location
+
+    with beam.Pipeline(options=options) as p, tft_beam.Context(temp_dir=temp_dir):
         train_set, test_set = get_train_and_test(p, data_location)
+
+        transf_train_ds, transform_fn = (train_set, metadata) | "TFT train" >> \
+                                        tft_beam.AnalyzeAndTransformDataset(
+                                            preprocessing_fn=preprocessing_fn,
+                                            output_record_batches=True)
+
+        transf_train_pcoll, _ = transf_train_ds
+
+        test_set_ds = (test_set, metadata)
+
+        transf_test_ds = \
+            (test_set_ds, transform_fn) | "TFT test" >> tft_beam.TransformDataset(output_record_batches=True)
+
+        transf_test_pcoll, _ = transf_test_ds
