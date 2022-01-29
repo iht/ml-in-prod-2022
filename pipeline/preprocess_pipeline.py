@@ -21,7 +21,7 @@ def get_train_and_test(p: Pipeline, data_location: str) -> (PCollection[Dict], P
 
     train_pos_dicts: PCollection[Dict] = train_pos | "Add label train pos" >> beam.Map(
         lambda t: {'text': t, 'target': 1})
-    train_neg_dicts: PCollection[Dict] = train_pos | "Add label train pos" >> beam.Map(
+    train_neg_dicts: PCollection[Dict] = train_neg | "Add label train neg" >> beam.Map(
         lambda t: {'text': t, 'target': 0})
 
     train_dicts: PCollection[Dict] = (train_pos_dicts, train_neg_dicts) | "Train set" >> beam.Flatten()
