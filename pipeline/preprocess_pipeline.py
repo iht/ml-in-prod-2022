@@ -56,7 +56,9 @@ def preprocessing_fn_tfidf(inputs):
     return {'indices': indices, 'weights': weights, 'targets': targets}
 
 
-def preprocesing_1_hot(inputs):
+def preprocessing_fn_1_hot(inputs):
+    # Just an example, not used here
+
     texts = inputs['text']
     targets = inputs['target']
 
