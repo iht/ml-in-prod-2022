@@ -48,6 +48,24 @@ def preprocessing_fn(inputs):
     return outputs
 
 
+def apply_tensorflow_transform(train_set: PCollection[Dict], test_set: PCollection[dict], metadata):
+    transf_train_ds, transform_fn = (train_set, metadata) | "TFT train" >> \
+                                    tft_beam.AnalyzeAndTransformDataset(
+                                        preprocessing_fn=preprocessing_fn,
+                                        output_record_batches=True)
+
+    transf_train_pcoll, _ = transf_train_ds
+
+    test_set_ds = (test_set, metadata)
+
+    transf_test_ds = \
+        (test_set_ds, transform_fn) | "TFT test" >> tft_beam.TransformDataset(output_record_batches=True)
+
+    transf_test_pcoll, _ = transf_test_ds
+
+    return transf_train_pcoll, transf_test_pcoll, transform_fn
+
+
 def run_pipeline(argv: List[str], data_location: str, output_location: str):
     feature_spec = {
         'text': tf.io.FixedLenFeature([], tf.strings),
@@ -64,17 +82,4 @@ def run_pipeline(argv: List[str], data_location: str, output_location: str):
 
     with beam.Pipeline(options=options) as p, tft_beam.Context(temp_dir=temp_dir):
         train_set, test_set = get_train_and_test(p, data_location)
-
-        transf_train_ds, transform_fn = (train_set, metadata) | "TFT train" >> \
-                                        tft_beam.AnalyzeAndTransformDataset(
-                                            preprocessing_fn=preprocessing_fn,
-                                            output_record_batches=True)
-
-        transf_train_pcoll, _ = transf_train_ds
-
-        test_set_ds = (test_set, metadata)
-
-        transf_test_ds = \
-            (test_set_ds, transform_fn) | "TFT test" >> tft_beam.TransformDataset(output_record_batches=True)
-
-        transf_test_pcoll, _ = transf_test_ds
+        train_set_transf, test_set_transf, transform_fn = apply_tensorflow_transform(train_set, test_set, metadata)
