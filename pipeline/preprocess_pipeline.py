@@ -9,6 +9,7 @@ import tensorflow as tf
 from tensorflow_transform.tf_metadata import dataset_metadata, schema_utils
 from apache_beam import PCollection, Pipeline
 from apache_beam.options.pipeline_options import PipelineOptions, GoogleCloudOptions
+from tfx_bsl.cc.tfx_bsl_extension.coders import RecordBatchToExamples
 
 
 def get_train_and_test(p: Pipeline, data_location: str) -> (PCollection[Dict], PCollection[Dict]):
@@ -113,9 +114,27 @@ def run_pipeline(argv: List[str], data_location: str, output_location: str):
     gcp_options = options.view_as(GoogleCloudOptions)
     temp_dir = gcp_options.temp_location
 
+    train_output_location = os.path.join(output_location, "train/")
+    test_output_location = os.path.join(output_location, "test/")
+
     with beam.Pipeline(options=options) as p, tft_beam.Context(temp_dir=temp_dir):
         train_set, test_set = get_train_and_test(p, data_location)
         train_set_transf, test_set_transf, transform_fn = apply_tensorflow_transform(train_set, test_set, metadata)
+
+        # PCollection[Listas[elementos]] --> PCollection[elementos]
+        #    3 listas de 15 elems                  45 elems
+
+        train_set_tf_example: PCollection[tf.train.Example] = train_set_transf | "Train to example" >> beam.FlatMap(
+            lambda r, _: RecordBatchToExamples(r))
+
+        train_set_tf_example | "Write train" >> beam.io.WriteToTFRecord(file_path_prefix=train_output_location,
+                                                                        file_name_suffix=".tfrecord")
+
+        test_set_tf_example = test_set_transf | "Text to example" >> beam.FlatMap(
+            lambda r, _: RecordBatchToExamples(r))
+
+        test_set_tf_example | "Write test" >> beam.io.WriteToTFRecord(file_path_prefix=test_output_location,
+                                                                      file_name_suffix=".tfrecord")
 
         transform_fn_location = os.path.join(output_location, "transform_fn/")
         transform_fn | "Write transform fn" >> tft_beam.WriteTransformFn(transform_fn_location)
