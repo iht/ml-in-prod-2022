@@ -116,3 +116,6 @@ def run_pipeline(argv: List[str], data_location: str, output_location: str):
     with beam.Pipeline(options=options) as p, tft_beam.Context(temp_dir=temp_dir):
         train_set, test_set = get_train_and_test(p, data_location)
         train_set_transf, test_set_transf, transform_fn = apply_tensorflow_transform(train_set, test_set, metadata)
+
+        transform_fn_location = os.path.join(output_location, "transform_fn/")
+        transform_fn | "Write transform fn" >> tft_beam.WriteTransformFn(transform_fn_location)
