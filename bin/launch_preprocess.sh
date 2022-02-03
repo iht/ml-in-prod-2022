@@ -23,7 +23,7 @@ EXTRA_PACKAGE=dist/my_first_ml_model-$VERSION.tar.gz
 
 pip install "$EXTRA_PACKAGE"
 
-python run_preprocess.py \
+python pipeline/pr \
   --runner=DataflowRunner \
   --region=$REGION \
   --project=$PROJECT \

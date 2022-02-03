@@ -138,3 +138,4 @@ def run_pipeline(argv: List[str], data_location: str, output_location: str):
 
         transform_fn_location = os.path.join(output_location, "transform_fn/")
         transform_fn | "Write transform fn" >> tft_beam.WriteTransformFn(transform_fn_location)
+
