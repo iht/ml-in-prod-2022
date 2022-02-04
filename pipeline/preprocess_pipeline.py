@@ -1,3 +1,4 @@
+import argparse
 import os
 
 from typing import List, Dict
@@ -139,3 +140,16 @@ def run_pipeline(argv: List[str], data_location: str, output_location: str):
         transform_fn_location = os.path.join(output_location, "transform_fn/")
         transform_fn | "Write transform fn" >> tft_beam.WriteTransformFn(transform_fn_location)
 
+
+if __name__ == '__main__':
+    parser = argparse.ArgumentParser()
+
+    parser.add_argument("--data-location", required=True)
+    parser.add_argument("--output-location", required=True)
+
+    known_args, other_args = parser.parse_known_args()
+
+    data_location = known_args.data_location
+    output_location = known_args.output_location
+
+    run_pipeline(other_args, data_location, output_location)
