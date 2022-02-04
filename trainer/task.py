@@ -1,6 +1,7 @@
 """A simple main file to showcase the template."""
 
 import logging
+import sys
 
 
 def train_and_evaluate(some_arg: str):
@@ -9,6 +10,8 @@ def train_and_evaluate(some_arg: str):
 
 if __name__ == "__main__":
     import argparse
+
+    parser = argparse.ArgumentParser()
 
     parser.add_argument('--some-arg', default=None, required=True)
 
