@@ -83,7 +83,7 @@ def preprocessing_fn(inputs):
     return outputs
 
 
-def apply_tensorflow_transform(train_set: PCollection[Dict], test_set: PCollection[dict], metadata):
+def apply_tensorflow_transform(train_set: PCollection[Dict], test_set: PCollection[Dict], metadata):
     transf_train_ds, transform_fn = (train_set, metadata) | "TFT train" >> \
                                     tft_beam.AnalyzeAndTransformDataset(
                                         preprocessing_fn=preprocessing_fn,
@@ -115,8 +115,8 @@ def run_pipeline(argv: List[str], data_location: str, output_location: str):
     gcp_options = options.view_as(GoogleCloudOptions)
     temp_dir = gcp_options.temp_location
 
-    train_output_location = os.path.join(output_location, "train/")
-    test_output_location = os.path.join(output_location, "test/")
+    train_output_location = os.path.join(output_location, "train/train-")
+    test_output_location = os.path.join(output_location, "test/test-")
 
     with beam.Pipeline(options=options) as p, tft_beam.Context(temp_dir=temp_dir):
         train_set, test_set = get_train_and_test(p, data_location)
@@ -125,17 +125,18 @@ def run_pipeline(argv: List[str], data_location: str, output_location: str):
         # PCollection[Listas[elementos]] --> PCollection[elementos]
         #    3 listas de 15 elems                  45 elems
 
-        train_set_tf_example: PCollection[tf.train.Example] = train_set_transf | "Train to example" >> beam.FlatMap(
+        train_set_tf_example: PCollection[
+            tf.train.Example] = train_set_transf | "Train to example" >> beam.FlatMapTuple(
             lambda r, _: RecordBatchToExamples(r))
 
         train_set_tf_example | "Write train" >> beam.io.WriteToTFRecord(file_path_prefix=train_output_location,
                                                                         file_name_suffix=".tfrecord")
 
-        # test_set_tf_example: PCollection[tf.train.Example] = test_set_transf | "Test to example" >> beam.FlatMap(
-        #     lambda r, _: RecordBatchToExamples(r))
-        #
-        # test_set_tf_example | "Write test" >> beam.io.WriteToTFRecord(file_path_prefix=test_output_location,
-        #                                                               file_name_suffix=".tfrecord")
+        test_set_tf_example: PCollection[tf.train.Example] = test_set_transf | "Test to example" >> beam.FlatMapTuple(
+            lambda r, _: RecordBatchToExamples(r))
+
+        test_set_tf_example | "Write test" >> beam.io.WriteToTFRecord(file_path_prefix=test_output_location,
+                                                                      file_name_suffix=".tfrecord")
 
         transform_fn_location = os.path.join(output_location, "transform_fn/")
         transform_fn | "Write transform fn" >> tft_beam.WriteTransformFn(transform_fn_location)
