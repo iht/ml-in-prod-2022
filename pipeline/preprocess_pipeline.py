@@ -15,7 +15,7 @@ from tfx_bsl.cc.tfx_bsl_extension.coders import RecordBatchToExamples
 
 def get_train_and_test(p: Pipeline, data_location: str) -> (PCollection[Dict], PCollection[Dict]):
     train_pos_location = os.path.join(data_location, "train/pos/")
-    train_neg_location = os.path.join(data_location, "train/neg")
+    train_neg_location = os.path.join(data_location, "train/neg/")
     test_pos_location = os.path.join(data_location, "test/pos/")
     test_neg_location = os.path.join(data_location, "test/neg/")
 
