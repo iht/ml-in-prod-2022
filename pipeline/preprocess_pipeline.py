@@ -108,7 +108,7 @@ def run_pipeline(argv: List[str], data_location: str, output_location: str):
     }
 
     metadata = dataset_metadata.DatasetMetadata(
-        schema_utils.schema_as_feature_spec(feature_spec)
+        schema_utils.schema_from_feature_spec(feature_spec)
     )
 
     options = PipelineOptions(argv)
