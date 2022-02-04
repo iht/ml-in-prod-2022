@@ -131,11 +131,11 @@ def run_pipeline(argv: List[str], data_location: str, output_location: str):
         train_set_tf_example | "Write train" >> beam.io.WriteToTFRecord(file_path_prefix=train_output_location,
                                                                         file_name_suffix=".tfrecord")
 
-        test_set_tf_example = test_set_transf | "Text to example" >> beam.FlatMap(
-            lambda r, _: RecordBatchToExamples(r))
-
-        test_set_tf_example | "Write test" >> beam.io.WriteToTFRecord(file_path_prefix=test_output_location,
-                                                                      file_name_suffix=".tfrecord")
+        # test_set_tf_example: PCollection[tf.train.Example] = test_set_transf | "Test to example" >> beam.FlatMap(
+        #     lambda r, _: RecordBatchToExamples(r))
+        #
+        # test_set_tf_example | "Write test" >> beam.io.WriteToTFRecord(file_path_prefix=test_output_location,
+        #                                                               file_name_suffix=".tfrecord")
 
         transform_fn_location = os.path.join(output_location, "transform_fn/")
         transform_fn | "Write transform fn" >> tft_beam.WriteTransformFn(transform_fn_location)
