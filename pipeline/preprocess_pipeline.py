@@ -10,7 +10,7 @@ import tensorflow as tf
 from tensorflow_transform.tf_metadata import dataset_metadata, schema_utils
 from apache_beam import PCollection, Pipeline
 from apache_beam.options.pipeline_options import PipelineOptions, GoogleCloudOptions
-from tfx_bsl.cc.tfx_bsl_extension.coders import RecordBatchToExamples
+from tfx_bsl.coders.example_coder import RecordBatchToExamples
 
 
 def get_train_and_test(p: Pipeline, data_location: str) -> (PCollection[Dict], PCollection[Dict]):
