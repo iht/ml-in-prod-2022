@@ -103,7 +103,7 @@ def apply_tensorflow_transform(train_set: PCollection[Dict], test_set: PCollecti
 
 def run_pipeline(argv: List[str], data_location: str, output_location: str):
     feature_spec = {
-        'text': tf.io.FixedLenFeature([], tf.strings),
+        'text': tf.io.FixedLenFeature([], tf.string),
         'target': tf.io.FixedLenFeature([], tf.int64)
     }
 
