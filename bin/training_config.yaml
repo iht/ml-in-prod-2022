@@ -8,7 +8,7 @@ workerPoolSpecs:
   replicaCount: 1
   pythonPackageSpec:
     executorImageUri: europe-docker.pkg.dev/vertex-ai/training/tf-cpu.2-7:latest
-    packageUris: gs://SOMEWHEREXXXXMASCAMBIOSXXXX
+    packageUris: gs://ferrous-linker-339609/dist/my_first_ml_model-0.2+1.gb68252e.tar.gz
     pythonModule: trainer.task
     args:
       - --data-location=gs://ferrous-linker-339609/output/
