@@ -7,10 +7,10 @@ import apache_beam as beam
 import tensorflow_transform.beam as tft_beam
 import tensorflow_transform as tft
 import tensorflow as tf
+from apache_beam.io import tfrecordio
 from tensorflow_transform.tf_metadata import dataset_metadata, schema_utils
 from apache_beam import PCollection, Pipeline
 from apache_beam.options.pipeline_options import PipelineOptions, GoogleCloudOptions
-from tfx_bsl.coders.example_coder import RecordBatchToExamples
 
 
 def get_train_and_test(p: Pipeline, data_location: str) -> (PCollection[Dict], PCollection[Dict]):
@@ -86,19 +86,14 @@ def preprocessing_fn(inputs):
 def apply_tensorflow_transform(train_set: PCollection[Dict], test_set: PCollection[Dict], metadata):
     transf_train_ds, transform_fn = (train_set, metadata) | "TFT train" >> \
                                     tft_beam.AnalyzeAndTransformDataset(
-                                        preprocessing_fn=preprocessing_fn,
-                                        output_record_batches=True)
-
-    transf_train_pcoll, _ = transf_train_ds
+                                        preprocessing_fn=preprocessing_fn)
 
     test_set_ds = (test_set, metadata)
 
     transf_test_ds = \
-        (test_set_ds, transform_fn) | "TFT test" >> tft_beam.TransformDataset(output_record_batches=True)
+        (test_set_ds, transform_fn) | "TFT test" >> tft_beam.TransformDataset()
 
-    transf_test_pcoll, _ = transf_test_ds
-
-    return transf_train_pcoll, transf_test_pcoll, transform_fn
+    return transf_train_ds, transf_test_ds, transform_fn
 
 
 def run_pipeline(argv: List[str], data_location: str, output_location: str):
@@ -115,28 +110,24 @@ def run_pipeline(argv: List[str], data_location: str, output_location: str):
     gcp_options = options.view_as(GoogleCloudOptions)
     temp_dir = gcp_options.temp_location
 
-    train_output_location = os.path.join(output_location, "train/train-")
-    test_output_location = os.path.join(output_location, "test/test-")
+    train_output_location = os.path.join(output_location, "train/train")
+    test_output_location = os.path.join(output_location, "test/test")
 
     with beam.Pipeline(options=options) as p, tft_beam.Context(temp_dir=temp_dir):
         train_set, test_set = get_train_and_test(p, data_location)
-        train_set_transf, test_set_transf, transform_fn = apply_tensorflow_transform(train_set, test_set, metadata)
+        train_set_ds, test_set_ds, transform_fn = apply_tensorflow_transform(train_set, test_set, metadata)
+
+        train_set_transf, train_metadata = train_set_ds
+        test_set_transf, test_metadata = test_set_ds
 
         # PCollection[Listas[elementos]] --> PCollection[elementos]
         #    3 listas de 15 elems                  45 elems
 
-        train_set_tf_example: PCollection[
-            tf.train.Example] = train_set_transf | "Train to example" >> beam.FlatMapTuple(
-            lambda r, _: RecordBatchToExamples(r))
+        train_set_transf | "Write train" >> \
+        tfrecordio.WriteToTFRecord(train_output_location, coder=tft.coders.ExampleProtoCoder(train_metadata[0].schema))
 
-        train_set_tf_example | "Write train" >> beam.io.WriteToTFRecord(file_path_prefix=train_output_location,
-                                                                        file_name_suffix=".tfrecord")
-
-        test_set_tf_example: PCollection[tf.train.Example] = test_set_transf | "Test to example" >> beam.FlatMapTuple(
-            lambda r, _: RecordBatchToExamples(r))
-
-        test_set_tf_example | "Write test" >> beam.io.WriteToTFRecord(file_path_prefix=test_output_location,
-                                                                      file_name_suffix=".tfrecord")
+        test_set_transf | "Write test" >> \
+        tfrecordio.WriteToTFRecord(test_output_location, coder=tft.coders.ExampleProtoCoder(test_metadata[0].schema))
 
         transform_fn_location = os.path.join(output_location, "transform_fn/")
         transform_fn | "Write transform fn" >> tft_beam.WriteTransformFn(transform_fn_location)
