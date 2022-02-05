@@ -4,7 +4,7 @@ baseOutputDirectory:
   outputUriPrefix: gs://ferrous-linker-339609/training-output/
 workerPoolSpecs:
   machineSpec:
-    machineType: n1-standard-2
+    machineType: n2-standard-4
   replicaCount: 1
   pythonPackageSpec:
     executorImageUri: europe-docker.pkg.dev/vertex-ai/training/tf-cpu.2-7:latest
