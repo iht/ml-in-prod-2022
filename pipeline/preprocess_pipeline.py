@@ -124,10 +124,14 @@ def run_pipeline(argv: List[str], data_location: str, output_location: str):
         #    3 listas de 15 elems                  45 elems
 
         train_set_transf | "Write train" >> \
-        tfrecordio.WriteToTFRecord(train_output_location, coder=tft.coders.ExampleProtoCoder(train_metadata[0].schema))
+        tfrecordio.WriteToTFRecord(train_output_location,
+                                   coder=tft.coders.ExampleProtoCoder(train_metadata[0].schema),
+                                   file_name_suffix=".tfrecord")
 
         test_set_transf | "Write test" >> \
-        tfrecordio.WriteToTFRecord(test_output_location, coder=tft.coders.ExampleProtoCoder(test_metadata[0].schema))
+        tfrecordio.WriteToTFRecord(test_output_location,
+                                   coder=tft.coders.ExampleProtoCoder(test_metadata[0].schema),
+                                   file_name_suffix=".tfrecord")
 
         transform_fn_location = os.path.join(output_location, "transform_fn/")
         transform_fn | "Write transform fn" >> tft_beam.WriteTransformFn(transform_fn_location)
