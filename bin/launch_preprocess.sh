@@ -6,7 +6,7 @@ set -e
 INPUT_DATA=gs://class-ml-prod-2022/data/raw/aclImdb
 OUTPUT_DATA=gs://ferrous-linker-339609/output/
 
-NUM_WORKERS=5
+NUM_WORKERS=1
 WORKER_TYPE=n1-standard-8
 
 REGION=europe-west4
